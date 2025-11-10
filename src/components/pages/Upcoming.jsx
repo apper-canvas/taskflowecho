@@ -12,9 +12,15 @@ import Loading from "@/components/ui/Loading"
 import ErrorView from "@/components/ui/ErrorView"
 import Empty from "@/components/ui/Empty"
 import { taskService } from "@/services/api/taskService"
-import { format, isFuture, isThisWeek, isNextWeek, addWeeks } from "date-fns"
+import { format, isFuture, isThisWeek, addWeeks, startOfWeek, endOfWeek, isWithinInterval } from "date-fns"
 import { getPriorityOrder } from "@/utils/priorityHelpers"
 
+// Custom helper since isNextWeek is not available in date-fns 4.1.0
+const isNextWeek = (date) => {
+  const nextWeekStart = startOfWeek(addWeeks(new Date(), 1), { weekStartsOn: 1 })
+  const nextWeekEnd = endOfWeek(addWeeks(new Date(), 1), { weekStartsOn: 1 })
+  return isWithinInterval(date, { start: nextWeekStart, end: nextWeekEnd })
+}
 const Upcoming = () => {
   const [tasks, setTasks] = useState([])
   const [filteredTasks, setFilteredTasks] = useState([])
@@ -65,7 +71,7 @@ const Upcoming = () => {
         filtered = filtered.filter(task => isThisWeek(new Date(task.dueDate)))
         break
       case "nextWeek":
-        filtered = filtered.filter(task => isNextWeek(new Date(task.dueDate)))
+filtered = filtered.filter(task => isNextWeek(new Date(task.dueDate)))
         break
       default:
         break
@@ -212,7 +218,7 @@ const Upcoming = () => {
     { 
       label: "Next Week", 
       value: "nextWeek", 
-      count: tasks.filter(t => isNextWeek(new Date(t.dueDate))).length 
+count: tasks.filter(t => isNextWeek(new Date(t.dueDate))).length
     }
   ]
   
@@ -223,7 +229,7 @@ const Upcoming = () => {
     
     if (isThisWeek(taskDate)) {
       groupKey = "This Week"
-    } else if (isNextWeek(taskDate)) {
+} else if (isNextWeek(taskDate)) {
       groupKey = "Next Week"
     } else {
       const weeksFromNow = Math.ceil((taskDate - new Date()) / (1000 * 60 * 60 * 24 * 7))
