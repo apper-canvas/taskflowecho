@@ -1,53 +1,56 @@
-import { format, isToday, isTomorrow, isPast, isThisWeek, differenceInDays } from "date-fns"
+import { format, isToday, isTomorrow, isYesterday, parseISO } from 'date-fns';
 
-export const formatTaskDate = (date) => {
-  if (!date) return null
+export const formatTaskDate = (dateString) => {
+  if (!dateString) return null;
   
-  const taskDate = new Date(date)
-  
-  if (isToday(taskDate)) {
-    return "Today"
+  try {
+    const date = parseISO(dateString);
+    
+    if (isToday(date)) {
+      return 'Today';
+    } else if (isTomorrow(date)) {
+      return 'Tomorrow';
+    } else if (isYesterday(date)) {
+      return 'Yesterday';
+    } else {
+      return format(date, 'MMM d');
+    }
+  } catch (error) {
+    return null;
   }
-  
-  if (isTomorrow(taskDate)) {
-    return "Tomorrow"
-  }
-  
-  if (isThisWeek(taskDate)) {
-    return format(taskDate, "EEEE")
-  }
-  
-  return format(taskDate, "MMM dd")
-}
+};
 
-export const getDateBadgeColor = (date) => {
-  if (!date) return "bg-gray-100 text-gray-600"
+export const getDateBadgeColor = (dateString) => {
+  if (!dateString) return 'default';
   
-  const taskDate = new Date(date)
-  const daysDiff = differenceInDays(taskDate, new Date())
-  
-  if (isPast(taskDate) && !isToday(taskDate)) {
-    return "bg-error-100 text-error-700"
+  try {
+    const date = parseISO(dateString);
+    const now = new Date();
+    
+    if (date < now) {
+      return 'error'; // Overdue
+    } else if (isToday(date)) {
+      return 'warning'; // Due today
+    } else if (isTomorrow(date)) {
+      return 'info'; // Due tomorrow
+    } else {
+      return 'default'; // Future
+    }
+  } catch (error) {
+    return 'default';
   }
-  
-  if (isToday(taskDate)) {
-    return "bg-warning-100 text-warning-700"
-  }
-  
-  if (daysDiff <= 3) {
-    return "bg-warning-100 text-warning-600"
-  }
-  
-  return "bg-info-100 text-info-700"
-}
+};
 
-export const isOverdue = (date) => {
-  if (!date) return false
-  return isPast(new Date(date)) && !isToday(new Date(date))
-}
-
-export const isDueSoon = (date) => {
-  if (!date) return false
-  const daysDiff = differenceInDays(new Date(date), new Date())
-  return daysDiff >= 0 && daysDiff <= 3
-}
+export const isOverdue = (dateString) => {
+  if (!dateString) return false;
+  
+  try {
+    const date = parseISO(dateString);
+    const now = new Date();
+    now.setHours(0, 0, 0, 0); // Start of today
+    
+    return date < now;
+  } catch (error) {
+    return false;
+  }
+};

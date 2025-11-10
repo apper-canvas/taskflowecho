@@ -1,19 +1,19 @@
-import React, { useState, useEffect } from "react"
-import { motion } from "framer-motion"
-import { toast } from "react-toastify"
-import ApperIcon from "@/components/ApperIcon"
-import Button from "@/components/atoms/Button"
-import SearchBar from "@/components/molecules/SearchBar"
-import FilterTabs from "@/components/molecules/FilterTabs"
-import TaskCard from "@/components/molecules/TaskCard"
-import TaskForm from "@/components/organisms/TaskForm"
-import ConfirmationModal from "@/components/organisms/ConfirmationModal"
-import Loading from "@/components/ui/Loading"
-import ErrorView from "@/components/ui/ErrorView"
-import Empty from "@/components/ui/Empty"
-import { taskService } from "@/services/api/taskService"
-import { format, isFuture, isThisWeek, addWeeks, startOfWeek, endOfWeek, isWithinInterval } from "date-fns"
-import { getPriorityOrder } from "@/utils/priorityHelpers"
+import React, { useEffect, useState } from "react";
+import { motion } from "framer-motion";
+import { toast } from "react-toastify";
+import { taskService } from "@/services/api/taskService";
+import { addWeeks, endOfWeek, format, isFuture, isThisWeek, isWithinInterval, startOfWeek } from "date-fns";
+import ApperIcon from "@/components/ApperIcon";
+import Button from "@/components/atoms/Button";
+import ConfirmationModal from "@/components/organisms/ConfirmationModal";
+import TaskForm from "@/components/organisms/TaskForm";
+import TaskCard from "@/components/molecules/TaskCard";
+import FilterTabs from "@/components/molecules/FilterTabs";
+import SearchBar from "@/components/molecules/SearchBar";
+import Empty from "@/components/ui/Empty";
+import Loading from "@/components/ui/Loading";
+import ErrorView from "@/components/ui/ErrorView";
+import { getPriorityOrder } from "@/utils/priorityHelpers";
 
 // Custom helper since isNextWeek is not available in date-fns 4.1.0
 const isNextWeek = (date) => {
@@ -36,10 +36,10 @@ const Upcoming = () => {
   const loadTasks = async () => {
     try {
       setError("")
-      const allTasks = await taskService.getAll()
+const allTasks = await taskService.getAll()
       const upcomingTasks = allTasks.filter(task => {
-        if (!task.dueDate) return false
-        const taskDate = new Date(task.dueDate)
+        if (!task.due_date_c) return false
+        const taskDate = new Date(task.due_date_c)
         return isFuture(taskDate)
       })
       setTasks(upcomingTasks)
@@ -60,20 +60,21 @@ const Upcoming = () => {
     let filtered = [...tasks]
     
     // Apply status filter
+// Apply status filter
     switch (activeFilter) {
       case "active":
-        filtered = filtered.filter(task => !task.completed)
+        filtered = filtered.filter(task => !task.completed_c)
         break
       case "completed":
-        filtered = filtered.filter(task => task.completed)
+        filtered = filtered.filter(task => task.completed_c)
         break
       case "thisWeek":
-        filtered = filtered.filter(task => isThisWeek(new Date(task.dueDate)))
+        filtered = filtered.filter(task => isThisWeek(new Date(task.due_date_c)))
         break
       case "nextWeek":
-filtered = filtered.filter(task => isNextWeek(new Date(task.dueDate)))
+        filtered = filtered.filter(task => isNextWeek(new Date(task.due_date_c)))
         break
-      default:
+default:
         break
     }
     
@@ -81,26 +82,26 @@ filtered = filtered.filter(task => isNextWeek(new Date(task.dueDate)))
     if (searchQuery.trim()) {
       const query = searchQuery.toLowerCase()
       filtered = filtered.filter(task => 
-        task.title.toLowerCase().includes(query) ||
-        task.description.toLowerCase().includes(query)
+        task.title_c?.toLowerCase().includes(query) ||
+        task.description_c?.toLowerCase().includes(query)
       )
     }
     
     // Sort by due date, then priority
     filtered.sort((a, b) => {
-      if (a.completed !== b.completed) {
-        return a.completed - b.completed
+if (a.completed_c !== b.completed_c) {
+        return a.completed_c - b.completed_c
       }
       
-      const dateA = new Date(a.dueDate)
-      const dateB = new Date(b.dueDate)
+      const dateA = new Date(a.due_date_c)
+      const dateB = new Date(b.due_date_c)
       
       if (dateA.getTime() !== dateB.getTime()) {
         return dateA - dateB
       }
       
-      const priorityA = getPriorityOrder(a.priority)
-      const priorityB = getPriorityOrder(b.priority)
+const priorityA = getPriorityOrder(a.priority_c)
+      const priorityB = getPriorityOrder(b.priority_c)
       
       return priorityA - priorityB
     })
@@ -114,15 +115,15 @@ filtered = filtered.filter(task => isNextWeek(new Date(task.dueDate)))
       const tomorrow = new Date()
       tomorrow.setDate(tomorrow.getDate() + 1)
       
-      const taskWithDate = {
+const taskWithDate = {
         ...taskData,
-        dueDate: taskData.dueDate || tomorrow.toISOString().split('T')[0]
+        due_date_c: taskData.due_date_c || taskData.dueDate || tomorrow.toISOString().split('T')[0]
       }
       
       const newTask = await taskService.create(taskWithDate)
       
-      // Only add to local state if it's in the future
-      if (isFuture(new Date(newTask.dueDate))) {
+// Only add to local state if it's in the future
+      if (isFuture(new Date(newTask.due_date_c))) {
         setTasks(prev => [newTask, ...prev])
       }
       
@@ -143,9 +144,9 @@ filtered = filtered.filter(task => isNextWeek(new Date(task.dueDate)))
     try {
       const updatedTask = await taskService.update(editingTask.Id, taskData)
       
-      // Check if task still belongs to upcoming after update
-      if (isFuture(new Date(updatedTask.dueDate))) {
-        setTasks(prev => prev.map(task => 
+// Check if task still belongs to upcoming after update
+      if (isFuture(new Date(updatedTask.due_date_c))) {
+        setTasks(prev => prev.map(task =>
           task.Id === updatedTask.Id ? updatedTask : task
         ))
       } else {
@@ -206,30 +207,30 @@ filtered = filtered.filter(task => isNextWeek(new Date(task.dueDate)))
       count: tasks.length 
     },
     { 
-      label: "Active", 
+label: "Active", 
       value: "active", 
-      count: tasks.filter(t => !t.completed).length 
+      count: tasks.filter(t => !t.completed_c).length 
     },
     { 
       label: "This Week", 
       value: "thisWeek", 
-      count: tasks.filter(t => isThisWeek(new Date(t.dueDate))).length 
+      count: tasks.filter(t => isThisWeek(new Date(t.due_date_c))).length 
     },
     { 
       label: "Next Week", 
       value: "nextWeek", 
-count: tasks.filter(t => isNextWeek(new Date(t.dueDate))).length
+      count: tasks.filter(t => isNextWeek(new Date(t.due_date_c))).length
     }
   ]
   
   // Group tasks by time period
-  const groupedTasks = filteredTasks.reduce((groups, task) => {
-    const taskDate = new Date(task.dueDate)
+const groupedTasks = filteredTasks.reduce((groups, task) => {
+    const taskDate = new Date(task.due_date_c)
     let groupKey = ""
     
     if (isThisWeek(taskDate)) {
       groupKey = "This Week"
-} else if (isNextWeek(taskDate)) {
+    } else if (isNextWeek(taskDate)) {
       groupKey = "Next Week"
     } else {
       const weeksFromNow = Math.ceil((taskDate - new Date()) / (1000 * 60 * 60 * 24 * 7))
@@ -263,8 +264,8 @@ count: tasks.filter(t => isNextWeek(new Date(t.dueDate))).length
             <ApperIcon name="Clock" size={32} className="text-primary-600" />
             Upcoming
           </h1>
-          <p className="text-gray-600 mt-1">
-            {tasks.filter(t => !t.completed).length} upcoming tasks scheduled
+<p className="text-gray-600 mt-1">
+            {tasks.filter(t => !t.completed_c).length} upcoming tasks scheduled
           </p>
         </div>
         

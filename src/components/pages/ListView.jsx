@@ -38,8 +38,12 @@ const ListView = () => {
         taskService.getAll()
       ])
       
-      setList(listData)
-      const listTasks = allTasks.filter(task => task.listId === listId)
+setList(listData)
+      const listTasks = allTasks.filter(task => 
+        task.list_id_c?.Id?.toString() === listId ||
+        task.list_id_c?.toString() === listId ||
+        task.list_id_c === parseInt(listId)
+      )
       setTasks(listTasks)
     } catch (err) {
       setError("Failed to load list data. Please try again.")
@@ -61,11 +65,11 @@ const ListView = () => {
     
     // Apply status filter
     switch (activeFilter) {
-      case "active":
-        filtered = filtered.filter(task => !task.completed)
+case "active":
+        filtered = filtered.filter(task => !task.completed_c)
         break
       case "completed":
-        filtered = filtered.filter(task => task.completed)
+        filtered = filtered.filter(task => task.completed_c)
         break
       default:
         break
@@ -74,9 +78,9 @@ const ListView = () => {
     // Apply search filter
     if (searchQuery.trim()) {
       const query = searchQuery.toLowerCase()
-      filtered = filtered.filter(task => 
-        task.title.toLowerCase().includes(query) ||
-        task.description.toLowerCase().includes(query)
+filtered = filtered.filter(task => 
+        task.title_c?.toLowerCase().includes(query) ||
+        task.description_c?.toLowerCase().includes(query)
       )
     }
     
@@ -101,9 +105,10 @@ const ListView = () => {
   
   const handleCreateTask = async (taskData) => {
     try {
+// Add list ID to task data
       const taskWithList = {
         ...taskData,
-        listId: listId
+        list_id_c: parseInt(listId)
       }
       
       const newTask = await taskService.create(taskWithList)
@@ -124,9 +129,9 @@ const ListView = () => {
   const handleUpdateTask = async (taskData) => {
     try {
       const updatedTask = await taskService.update(editingTask.Id, taskData)
-      
-      // Check if task still belongs to this list after update
-      if (updatedTask.listId === listId) {
+// Check if task still belongs to this list after update
+      const updatedListId = updatedTask.list_id_c?.Id?.toString() || updatedTask.list_id_c?.toString()
+      if (updatedListId === listId) {
         setTasks(prev => prev.map(task => 
           task.Id === updatedTask.Id ? updatedTask : task
         ))
@@ -189,13 +194,13 @@ const ListView = () => {
     },
     { 
       label: "Active", 
-      value: "active", 
-      count: tasks.filter(t => !t.completed).length 
+value: "active", 
+      count: tasks.filter(t => !t.completed_c).length 
     },
     { 
       label: "Completed", 
       value: "completed", 
-      count: tasks.filter(t => t.completed).length 
+      count: tasks.filter(t => t.completed_c).length 
     }
   ]
   
@@ -222,12 +227,12 @@ const ListView = () => {
           <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-3">
             <div 
               className="w-8 h-8 rounded-lg flex-shrink-0"
-              style={{ backgroundColor: list.color }}
+style={{ backgroundColor: list.color_c }}
             />
-            {list.name}
+{list.name_c}
           </h1>
-          <p className="text-gray-600 mt-1">
-            {tasks.filter(t => !t.completed).length} active tasks, {tasks.filter(t => t.completed).length} completed
+<p className="text-gray-600 mt-1">
+            {tasks.filter(t => !t.completed_c).length} active tasks, {tasks.filter(t => t.completed_c).length} completed
           </p>
         </div>
         
@@ -245,8 +250,8 @@ const ListView = () => {
         <div className="bg-gradient-to-r from-gray-50 to-gray-100 rounded-lg p-6">
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-lg font-semibold text-gray-900">List Progress</h3>
-            <div className="text-2xl font-bold" style={{ color: list.color }}>
-              {Math.round((tasks.filter(t => t.completed).length / tasks.length) * 100)}%
+<div className="text-2xl font-bold" style={{ color: list.color_c }}>
+              {Math.round((tasks.filter(t => t.completed_c).length / tasks.length) * 100)}%
             </div>
           </div>
           
@@ -254,8 +259,8 @@ const ListView = () => {
             <div 
               className="h-full transition-all duration-500"
               style={{ 
-                backgroundColor: list.color,
-                width: `${(tasks.filter(t => t.completed).length / tasks.length) * 100}%` 
+                backgroundColor: list.color_c,
+                width: `${(tasks.filter(t => t.completed_c).length / tasks.length) * 100}%`
               }}
             />
           </div>
@@ -288,19 +293,19 @@ const ListView = () => {
         {filteredTasks.length === 0 ? (
           <Empty
             title={
-              searchQuery ? "No matching tasks" : 
-              activeFilter === "completed" ? `No completed ${list.name.toLowerCase()} tasks` :
-              activeFilter === "active" ? `No active ${list.name.toLowerCase()} tasks` :
-              `No ${list.name.toLowerCase()} tasks yet`
+searchQuery ? "No matching tasks" : 
+              activeFilter === "completed" ? `No completed ${list.name_c?.toLowerCase()} tasks` :
+              activeFilter === "active" ? `No active ${list.name_c?.toLowerCase()} tasks` :
+              `No ${list.name_c?.toLowerCase()} tasks yet`
             }
             description={
               searchQuery ? `No tasks found matching "${searchQuery}"` :
-              activeFilter === "completed" ? `Complete some ${list.name.toLowerCase()} tasks to see them here` :
-              activeFilter === "active" ? `All ${list.name.toLowerCase()} tasks are completed! 🎉` :
-              `Create your first ${list.name.toLowerCase()} task to get organized`
+              activeFilter === "completed" ? `Complete some ${list.name_c?.toLowerCase()} tasks to see them here` :
+              activeFilter === "active" ? `All ${list.name_c?.toLowerCase()} tasks are completed! 🎉` :
+              `Create your first ${list.name_c?.toLowerCase()} task to get organized`
             }
             icon="List"
-            actionLabel={`Add ${list.name} Task`}
+            actionLabel={`Add ${list.name_c} Task`}
             onAction={() => setTaskFormOpen(true)}
           />
         ) : (

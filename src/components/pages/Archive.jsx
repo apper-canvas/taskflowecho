@@ -1,16 +1,16 @@
-import React, { useState, useEffect } from "react"
-import { motion } from "framer-motion"
-import { toast } from "react-toastify"
-import ApperIcon from "@/components/ApperIcon"
-import Button from "@/components/atoms/Button"
-import SearchBar from "@/components/molecules/SearchBar"
-import TaskCard from "@/components/molecules/TaskCard"
-import ConfirmationModal from "@/components/organisms/ConfirmationModal"
-import Loading from "@/components/ui/Loading"
-import ErrorView from "@/components/ui/ErrorView"
-import Empty from "@/components/ui/Empty"
-import { taskService } from "@/services/api/taskService"
-import { format, parseISO } from "date-fns"
+import React, { useEffect, useState } from "react";
+import { motion } from "framer-motion";
+import { toast } from "react-toastify";
+import { taskService } from "@/services/api/taskService";
+import { format, parseISO } from "date-fns";
+import ApperIcon from "@/components/ApperIcon";
+import Button from "@/components/atoms/Button";
+import ConfirmationModal from "@/components/organisms/ConfirmationModal";
+import TaskCard from "@/components/molecules/TaskCard";
+import SearchBar from "@/components/molecules/SearchBar";
+import Empty from "@/components/ui/Empty";
+import Loading from "@/components/ui/Loading";
+import ErrorView from "@/components/ui/ErrorView";
 
 const Archive = () => {
   const [tasks, setTasks] = useState([])
@@ -22,11 +22,11 @@ const Archive = () => {
   const [confirmDelete, setConfirmDelete] = useState(null)
   const [confirmRestore, setConfirmRestore] = useState(null)
   
-  const loadTasks = async () => {
+const loadTasks = async () => {
     try {
       setError("")
       const allTasks = await taskService.getAll()
-      const completedTasks = allTasks.filter(task => task.completed)
+      const completedTasks = allTasks.filter(task => task.completed_c)
       setTasks(completedTasks)
     } catch (err) {
       setError("Failed to load archived tasks. Please try again.")
@@ -48,15 +48,15 @@ const Archive = () => {
     if (searchQuery.trim()) {
       const query = searchQuery.toLowerCase()
       filtered = filtered.filter(task => 
-        task.title.toLowerCase().includes(query) ||
-        task.description.toLowerCase().includes(query)
+        task.title_c?.toLowerCase().includes(query) ||
+        task.description_c?.toLowerCase().includes(query)
       )
     }
     
     // Sort by completion date (most recent first)
     filtered.sort((a, b) => {
-      const dateA = new Date(a.completedAt || a.createdAt)
-      const dateB = new Date(b.completedAt || b.createdAt)
+      const dateA = new Date(a.completed_at_c || a.CreatedOn)
+      const dateB = new Date(b.completed_at_c || b.CreatedOn)
       return dateB - dateA
     })
     
@@ -104,8 +104,8 @@ const Archive = () => {
   }
   
   // Group tasks by completion date
-  const groupedTasks = filteredTasks.reduce((groups, task) => {
-    const completionDate = task.completedAt ? parseISO(task.completedAt) : parseISO(task.createdAt)
+const groupedTasks = filteredTasks.reduce((groups, task) => {
+    const completionDate = task.completed_at_c ? parseISO(task.completed_at_c) : parseISO(task.CreatedOn)
     const dateKey = format(completionDate, "MMMM d, yyyy")
     
     if (!groups[dateKey]) {
@@ -246,13 +246,13 @@ const Archive = () => {
                       </div>
                       
                       <div className="flex-1 min-w-0">
-                        <h3 className="font-semibold text-gray-700 line-through">
-                          {task.title}
+<h3 className="font-semibold text-gray-700 line-through">
+                          {task.title_c}
                         </h3>
                         
-                        {task.description && (
+                        {task.description_c && (
                           <p className="text-sm text-gray-500 mt-1 line-through">
-                            {task.description}
+                            {task.description_c}
                           </p>
                         )}
                       </div>
@@ -261,7 +261,7 @@ const Archive = () => {
                     <div className="flex items-center justify-between">
                       <div className="text-xs text-success-600 font-medium flex items-center gap-1">
                         <ApperIcon name="Clock" size={12} />
-                        Completed {task.completedAt ? format(parseISO(task.completedAt), "h:mm a") : ""}
+Completed {task.completed_at_c ? format(parseISO(task.completed_at_c), "h:mm a") : ""}
                       </div>
                       
                       <div className="flex items-center gap-1">

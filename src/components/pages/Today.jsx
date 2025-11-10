@@ -1,19 +1,19 @@
-import React, { useState, useEffect } from "react"
-import { motion } from "framer-motion"
-import { toast } from "react-toastify"
-import ApperIcon from "@/components/ApperIcon"
-import Button from "@/components/atoms/Button"
-import SearchBar from "@/components/molecules/SearchBar"
-import FilterTabs from "@/components/molecules/FilterTabs"
-import TaskCard from "@/components/molecules/TaskCard"
-import TaskForm from "@/components/organisms/TaskForm"
-import ConfirmationModal from "@/components/organisms/ConfirmationModal"
-import Loading from "@/components/ui/Loading"
-import ErrorView from "@/components/ui/ErrorView"
-import Empty from "@/components/ui/Empty"
-import { taskService } from "@/services/api/taskService"
-import { format, isToday } from "date-fns"
-import { getPriorityOrder } from "@/utils/priorityHelpers"
+import React, { useEffect, useState } from "react";
+import { motion } from "framer-motion";
+import { toast } from "react-toastify";
+import { taskService } from "@/services/api/taskService";
+import { format, isToday } from "date-fns";
+import ApperIcon from "@/components/ApperIcon";
+import Button from "@/components/atoms/Button";
+import ConfirmationModal from "@/components/organisms/ConfirmationModal";
+import TaskForm from "@/components/organisms/TaskForm";
+import TaskCard from "@/components/molecules/TaskCard";
+import FilterTabs from "@/components/molecules/FilterTabs";
+import SearchBar from "@/components/molecules/SearchBar";
+import Empty from "@/components/ui/Empty";
+import Loading from "@/components/ui/Loading";
+import ErrorView from "@/components/ui/ErrorView";
+import { getPriorityOrder } from "@/utils/priorityHelpers";
 
 const Today = () => {
   const [tasks, setTasks] = useState([])
@@ -30,10 +30,10 @@ const Today = () => {
   const loadTasks = async () => {
     try {
       setError("")
-      const allTasks = await taskService.getAll()
+const allTasks = await taskService.getAll()
       const todayTasks = allTasks.filter(task => {
-        if (!task.dueDate) return false
-        return isToday(new Date(task.dueDate))
+        if (!task.due_date_c) return false
+        return isToday(new Date(task.due_date_c))
       })
       setTasks(todayTasks)
     } catch (err) {
@@ -52,13 +52,13 @@ const Today = () => {
   useEffect(() => {
     let filtered = [...tasks]
     
-    // Apply status filter
+// Apply status filter
     switch (activeFilter) {
       case "active":
-        filtered = filtered.filter(task => !task.completed)
+        filtered = filtered.filter(task => !task.completed_c)
         break
       case "completed":
-        filtered = filtered.filter(task => task.completed)
+        filtered = filtered.filter(task => task.completed_c)
         break
       default:
         break
@@ -68,25 +68,24 @@ const Today = () => {
     if (searchQuery.trim()) {
       const query = searchQuery.toLowerCase()
       filtered = filtered.filter(task => 
-        task.title.toLowerCase().includes(query) ||
-        task.description.toLowerCase().includes(query)
+        task.title_c?.toLowerCase().includes(query) ||
+        task.description_c?.toLowerCase().includes(query)
       )
     }
-    
     // Sort by priority and creation date
     filtered.sort((a, b) => {
-      if (a.completed !== b.completed) {
-        return a.completed - b.completed
+if (a.completed_c !== b.completed_c) {
+        return a.completed_c - b.completed_c
       }
       
-      const priorityA = getPriorityOrder(a.priority)
-      const priorityB = getPriorityOrder(b.priority)
+      const priorityA = getPriorityOrder(a.priority_c)
+const priorityB = getPriorityOrder(b.priority_c)
       
       if (priorityA !== priorityB) {
         return priorityA - priorityB
       }
       
-      return new Date(b.createdAt) - new Date(a.createdAt)
+return new Date(b.CreatedOn) - new Date(a.CreatedOn)
     })
     
     setFilteredTasks(filtered)
@@ -96,14 +95,14 @@ const Today = () => {
     try {
       // Set today's date if no due date is provided
       const taskWithDate = {
-        ...taskData,
-        dueDate: taskData.dueDate || new Date().toISOString().split('T')[0]
+...taskData,
+        due_date_c: taskData.due_date_c || taskData.dueDate || new Date().toISOString().split('T')[0]
       }
       
       const newTask = await taskService.create(taskWithDate)
       
-      // Only add to local state if it's due today
-      if (isToday(new Date(newTask.dueDate))) {
+// Only add to local state if it's due today
+      if (isToday(new Date(newTask.due_date_c))) {
         setTasks(prev => [newTask, ...prev])
       }
       
@@ -124,9 +123,9 @@ const Today = () => {
     try {
       const updatedTask = await taskService.update(editingTask.Id, taskData)
       
-      // Check if task still belongs to today after update
-      if (isToday(new Date(updatedTask.dueDate))) {
-        setTasks(prev => prev.map(task => 
+// Check if task still belongs to today after update
+      if (isToday(new Date(updatedTask.due_date_c))) {
+        setTasks(prev => prev.map(task =>
           task.Id === updatedTask.Id ? updatedTask : task
         ))
       } else {
@@ -188,13 +187,13 @@ const Today = () => {
     },
     { 
       label: "Active", 
-      value: "active", 
-      count: tasks.filter(t => !t.completed).length 
+value: "active", 
+      count: tasks.filter(t => !t.completed_c).length 
     },
     { 
-      label: "Completed", 
+label: "Completed", 
       value: "completed", 
-      count: tasks.filter(t => t.completed).length 
+      count: tasks.filter(t => t.completed_c).length
     }
   ]
   
@@ -213,8 +212,8 @@ const Today = () => {
             <ApperIcon name="Calendar" size={32} className="text-primary-600" />
             Today
           </h1>
-          <p className="text-gray-600 mt-1">
-            {format(new Date(), "EEEE, MMMM d, yyyy")} • {tasks.filter(t => !t.completed).length} tasks remaining
+<p className="text-gray-600 mt-1">
+            {format(new Date(), "EEEE, MMMM d, yyyy")} • {tasks.filter(t => !t.completed_c).length} tasks remaining
           </p>
         </div>
         
@@ -232,23 +231,23 @@ const Today = () => {
         <div className="bg-gradient-to-r from-primary-50 to-indigo-50 rounded-lg p-6">
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-lg font-semibold text-gray-900">Today's Progress</h3>
-            <div className="text-2xl font-bold text-primary-600">
-              {Math.round((tasks.filter(t => t.completed).length / tasks.length) * 100)}%
+<div className="text-2xl font-bold text-primary-600">
+              {Math.round((tasks.filter(t => t.completed_c).length / tasks.length) * 100)}%
             </div>
           </div>
           
           <div className="w-full bg-white rounded-full h-3 overflow-hidden">
             <div 
               className="h-full bg-gradient-to-r from-primary-500 to-indigo-600 transition-all duration-500"
-              style={{ 
-                width: `${(tasks.filter(t => t.completed).length / tasks.length) * 100}%` 
+style={{ 
+                width: `${(tasks.filter(t => t.completed_c).length / tasks.length) * 100}%`
               }}
             />
           </div>
           
-          <div className="flex justify-between text-sm text-gray-600 mt-2">
-            <span>{tasks.filter(t => t.completed).length} completed</span>
-            <span>{tasks.filter(t => !t.completed).length} remaining</span>
+<div className="flex justify-between text-sm text-gray-600 mt-2">
+            <span>{tasks.filter(t => t.completed_c).length} completed</span>
+            <span>{tasks.filter(t => !t.completed_c).length} remaining</span>
           </div>
         </div>
       )}

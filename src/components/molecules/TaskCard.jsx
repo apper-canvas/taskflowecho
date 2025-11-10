@@ -1,11 +1,11 @@
-import React, { useState } from "react"
-import { motion } from "framer-motion"
-import ApperIcon from "@/components/ApperIcon"
-import Checkbox from "@/components/atoms/Checkbox"
-import Badge from "@/components/atoms/Badge"
-import { cn } from "@/utils/cn"
-import { formatTaskDate, getDateBadgeColor, isOverdue } from "@/utils/dateHelpers"
-import { getPriorityColor, getPriorityTextColor } from "@/utils/priorityHelpers"
+import React, { useState } from "react";
+import { motion } from "framer-motion";
+import ApperIcon from "@/components/ApperIcon";
+import Badge from "@/components/atoms/Badge";
+import Checkbox from "@/components/atoms/Checkbox";
+import { getPriorityColor, getPriorityTextColor } from "@/utils/priorityHelpers";
+import { formatTaskDate, getDateBadgeColor, isOverdue } from "@/utils/dateHelpers";
+import { cn } from "@/utils/cn";
 
 const TaskCard = ({ 
   task, 
@@ -16,8 +16,8 @@ const TaskCard = ({
 }) => {
   const [isCompleting, setIsCompleting] = useState(false)
   
-  const handleToggleComplete = async () => {
-    if (task.completed) {
+const handleToggleComplete = () => {
+    if (task.completed_c) {
       onToggleComplete(task.Id)
       return
     }
@@ -30,10 +30,9 @@ const TaskCard = ({
     }, 300)
   }
   
-  const dateLabel = formatTaskDate(task.dueDate)
-  const dateBadgeColor = getDateBadgeColor(task.dueDate)
-  const priorityColor = getPriorityColor(task.priority)
-  const priorityTextColor = getPriorityTextColor(task.priority)
+  const dateLabel = formatTaskDate(task.due_date_c)
+  const dateBadgeColor = getDateBadgeColor(task.due_date_c)
+const priorityColor = getPriorityColor(task.priority_c)
   
   return (
     <motion.div
@@ -48,7 +47,7 @@ const TaskCard = ({
       transition={{ duration: 0.2 }}
       className={cn(
         "task-card bg-white rounded-lg border border-gray-200 p-4 space-y-3 transition-all duration-200",
-        task.completed && "task-completed",
+task.completed_c && "task-completed",
         isCompleting && "animate-complete",
         className
       )}
@@ -56,36 +55,35 @@ const TaskCard = ({
       {/* Main task content */}
       <div className="flex items-start gap-3">
         <div className="mt-0.5">
-          <Checkbox
-            checked={task.completed}
+<Checkbox
+            checked={task.completed_c}
             onChange={handleToggleComplete}
           />
         </div>
         
-        <div className="flex-1 min-w-0">
+<div className="flex-1 min-w-0">
           <h3 className={cn(
             "font-semibold text-gray-900 transition-all duration-300",
-            task.completed && "line-through text-gray-500"
+            task.completed_c && "line-through text-gray-500"
           )}>
-            {task.title}
+            {task.title_c}
           </h3>
           
-          {task.description && (
+          {task.description_c && (
             <p className={cn(
               "text-sm text-gray-600 mt-1 transition-all duration-300",
-              task.completed && "line-through text-gray-400"
+              task.completed_c && "line-through text-gray-400"
             )}>
-              {task.description}
+              {task.description_c}
             </p>
           )}
         </div>
-        
         {/* Priority badge */}
-        {task.priority && (
+{task.priority_c && (
           <div className={cn(
             "w-3 h-3 rounded-full flex-shrink-0 mt-1.5",
             priorityColor,
-            `priority-${task.priority}`
+            `priority-${task.priority_c}`
           )} />
         )}
       </div>
@@ -94,12 +92,12 @@ const TaskCard = ({
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
           {/* Due date badge */}
-          {dateLabel && (
+{dateLabel && (
             <Badge 
-              variant={isOverdue(task.dueDate) ? "error" : "default"}
+              variant={isOverdue(task.due_date_c) ? "error" : "default"}
               className={cn(
                 "transition-all duration-300",
-                task.completed && "opacity-50"
+                task.completed_c && "opacity-50"
               )}
             >
               <ApperIcon name="Calendar" size={12} className="mr-1" />
@@ -108,19 +106,18 @@ const TaskCard = ({
           )}
           
           {/* Priority text */}
-          {task.priority && (
+{task.priority_c && (
             <span className={cn(
               "text-xs font-medium transition-all duration-300",
-              priorityTextColor,
-              task.completed && "opacity-50"
+              getPriorityTextColor(task.priority_c),
+              task.completed_c && "opacity-50"
             )}>
-              {task.priority.charAt(0).toUpperCase() + task.priority.slice(1)}
+              {task.priority_c.charAt(0).toUpperCase() + task.priority_c.slice(1)}
             </span>
           )}
         </div>
-        
-        {/* Action buttons */}
-        {!task.completed && (
+{/* Action buttons */}
+        {!task.completed_c && (
           <div className="flex items-center gap-1">
             <button
               onClick={() => onEdit(task)}
@@ -140,7 +137,7 @@ const TaskCard = ({
           </div>
         )}
         
-        {task.completed && (
+{task.completed_c && (
           <div className="text-xs text-success-600 font-medium flex items-center gap-1">
             <ApperIcon name="Check" size={12} />
             Completed

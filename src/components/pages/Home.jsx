@@ -1,19 +1,19 @@
-import React, { useState, useEffect } from "react"
-import { motion } from "framer-motion"
-import { toast } from "react-toastify"
-import ApperIcon from "@/components/ApperIcon"
-import Button from "@/components/atoms/Button"
-import SearchBar from "@/components/molecules/SearchBar"
-import FilterTabs from "@/components/molecules/FilterTabs"
-import TaskCard from "@/components/molecules/TaskCard"
-import TaskForm from "@/components/organisms/TaskForm"
-import ConfirmationModal from "@/components/organisms/ConfirmationModal"
-import Loading from "@/components/ui/Loading"
-import ErrorView from "@/components/ui/ErrorView"
-import Empty from "@/components/ui/Empty"
-import { taskService } from "@/services/api/taskService"
-import { cn } from "@/utils/cn"
-import { getPriorityOrder } from "@/utils/priorityHelpers"
+import React, { useEffect, useState } from "react";
+import { motion } from "framer-motion";
+import { toast } from "react-toastify";
+import { taskService } from "@/services/api/taskService";
+import ApperIcon from "@/components/ApperIcon";
+import Button from "@/components/atoms/Button";
+import ConfirmationModal from "@/components/organisms/ConfirmationModal";
+import TaskForm from "@/components/organisms/TaskForm";
+import TaskCard from "@/components/molecules/TaskCard";
+import FilterTabs from "@/components/molecules/FilterTabs";
+import SearchBar from "@/components/molecules/SearchBar";
+import Empty from "@/components/ui/Empty";
+import Loading from "@/components/ui/Loading";
+import ErrorView from "@/components/ui/ErrorView";
+import { getPriorityOrder } from "@/utils/priorityHelpers";
+import { cn } from "@/utils/cn";
 
 const Home = () => {
   const [tasks, setTasks] = useState([])
@@ -48,13 +48,13 @@ const Home = () => {
   useEffect(() => {
     let filtered = [...tasks]
     
-    // Apply status filter
+// Apply status filter
     switch (activeFilter) {
       case "active":
-        filtered = filtered.filter(task => !task.completed)
+        filtered = filtered.filter(task => !task.completed_c)
         break
       case "completed":
-        filtered = filtered.filter(task => task.completed)
+        filtered = filtered.filter(task => task.completed_c)
         break
       default:
         break
@@ -64,25 +64,25 @@ const Home = () => {
     if (searchQuery.trim()) {
       const query = searchQuery.toLowerCase()
       filtered = filtered.filter(task => 
-        task.title.toLowerCase().includes(query) ||
-        task.description.toLowerCase().includes(query)
+        task.title_c?.toLowerCase().includes(query) ||
+        task.description_c?.toLowerCase().includes(query)
       )
     }
     
     // Sort by priority and creation date
     filtered.sort((a, b) => {
-      if (a.completed !== b.completed) {
-        return a.completed - b.completed
+      if (a.completed_c !== b.completed_c) {
+        return a.completed_c - b.completed_c
       }
       
-      const priorityA = getPriorityOrder(a.priority)
-      const priorityB = getPriorityOrder(b.priority)
+      const priorityA = getPriorityOrder(a.priority_c)
+      const priorityB = getPriorityOrder(b.priority_c)
       
       if (priorityA !== priorityB) {
         return priorityA - priorityB
       }
       
-      return new Date(b.createdAt) - new Date(a.createdAt)
+      return new Date(b.CreatedOn) - new Date(a.CreatedOn)
     })
     
     setFilteredTasks(filtered)
@@ -165,13 +165,13 @@ const Home = () => {
     },
     { 
       label: "Active", 
-      value: "active", 
-      count: tasks.filter(t => !t.completed).length 
+value: "active", 
+      count: tasks.filter(t => !t.completed_c).length 
     },
     { 
       label: "Completed", 
       value: "completed", 
-      count: tasks.filter(t => t.completed).length 
+      count: tasks.filter(t => t.completed_c).length
     }
   ]
   
@@ -187,8 +187,8 @@ const Home = () => {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold text-gray-900">All Tasks</h1>
-          <p className="text-gray-600 mt-1">
-            {tasks.filter(t => !t.completed).length} active tasks, {tasks.filter(t => t.completed).length} completed
+<p className="text-gray-600 mt-1">
+            {tasks.filter(t => !t.completed_c).length} active tasks, {tasks.filter(t => t.completed_c).length} completed
           </p>
         </div>
         

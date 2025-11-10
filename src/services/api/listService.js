@@ -1,62 +1,241 @@
-import listsData from "@/services/mockData/lists.json"
-
-let lists = [...listsData]
-
-const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms))
+import { getApperClient } from "@/services/apperClient";
+import { toast } from "react-toastify";
+import React from "react";
 
 export const listService = {
   async getAll() {
-    await delay(200)
-    return [...lists]
+    try {
+      const apperClient = getApperClient();
+      
+      const params = {
+        fields: [
+          {"field": {"Name": "Id"}},
+          {"field": {"Name": "Name"}},
+          {"field": {"Name": "name_c"}},
+          {"field": {"Name": "color_c"}},
+          {"field": {"Name": "order_c"}},
+          {"field": {"Name": "CreatedOn"}}
+        ],
+        orderBy: [{"fieldName": "order_c", "sorttype": "ASC"}]
+      };
+
+      const response = await apperClient.fetchRecords('list_c', params);
+
+      if (!response.success) {
+        console.error("Failed to fetch lists:", response.message);
+        toast.error(response.message);
+        return [];
+      }
+
+      return response.data || [];
+    } catch (error) {
+      console.error("Error fetching lists:", error?.response?.data?.message || error);
+      return [];
+    }
   },
-  
+
   async getById(id) {
-    await delay(150)
-    const list = lists.find(list => list.id === id)
-    if (!list) {
-      throw new Error("List not found")
+    try {
+      const apperClient = getApperClient();
+      
+      const params = {
+        fields: [
+          {"field": {"Name": "Id"}},
+          {"field": {"Name": "Name"}},
+          {"field": {"Name": "name_c"}},
+          {"field": {"Name": "color_c"}},
+          {"field": {"Name": "order_c"}},
+          {"field": {"Name": "CreatedOn"}}
+        ]
+      };
+
+      // Handle both numeric ID and string-based lookups
+      let recordId;
+      if (typeof id === 'string' && isNaN(parseInt(id))) {
+        // If ID is a string like "work", "personal", find by name_c field
+        const allLists = await this.getAll();
+        const list = allLists.find(list => 
+          list.name_c?.toLowerCase() === id.toLowerCase() ||
+          list.Name?.toLowerCase() === id.toLowerCase()
+        );
+        return list || null;
+      } else {
+        recordId = parseInt(id);
+      }
+
+      const response = await apperClient.getRecordById('list_c', recordId, params);
+
+      if (!response.success) {
+        console.error(`Failed to fetch list ${id}:`, response.message);
+        return null;
+      }
+
+      return response.data;
+    } catch (error) {
+      console.error(`Error fetching list ${id}:`, error?.response?.data?.message || error);
+      return null;
     }
-    return { ...list }
   },
-  
+
   async create(listData) {
-    await delay(300)
-    const maxId = Math.max(...lists.map(list => list.Id), 0)
-    const newList = {
-      Id: maxId + 1,
-      id: listData.name.toLowerCase().replace(/\s+/g, '-'),
-      ...listData,
-      order: lists.length + 1,
-      createdAt: new Date().toISOString()
+    try {
+      const apperClient = getApperClient();
+      
+      // Get current lists to determine order
+      const currentLists = await this.getAll();
+      const maxOrder = currentLists.reduce((max, list) => Math.max(max, list.order_c || 0), 0);
+
+      // Map to database field names and include only Updateable fields
+      const params = {
+        records: [{
+          Name: listData.name_c || listData.name || "",
+          name_c: listData.name_c || listData.name || "",
+          color_c: listData.color_c || listData.color || "#6366f1",
+          order_c: maxOrder + 1
+        }]
+      };
+
+      const response = await apperClient.createRecord('list_c', params);
+
+      if (!response.success) {
+        console.error("Failed to create list:", response.message);
+        toast.error(response.message);
+        return null;
+      }
+
+      if (response.results) {
+        const successful = response.results.filter(r => r.success);
+        const failed = response.results.filter(r => !r.success);
+
+        if (failed.length > 0) {
+          console.error(`Failed to create ${failed.length} lists:`, failed);
+          failed.forEach(record => {
+            if (record.message) toast.error(record.message);
+          });
+        }
+
+        return successful[0]?.data || null;
+      }
+
+      return null;
+    } catch (error) {
+      console.error("Error creating list:", error?.response?.data?.message || error);
+      return null;
     }
-    lists.push(newList)
-    return { ...newList }
   },
-  
+
   async update(id, listData) {
-    await delay(250)
-    const listIndex = lists.findIndex(list => list.id === id)
-    if (listIndex === -1) {
-      throw new Error("List not found")
+    try {
+      const apperClient = getApperClient();
+      
+      // Handle both numeric ID and string-based lookups
+      let recordId;
+      if (typeof id === 'string' && isNaN(parseInt(id))) {
+        const list = await this.getById(id);
+        if (!list) {
+          throw new Error("List not found");
+        }
+        recordId = list.Id;
+      } else {
+        recordId = parseInt(id);
+      }
+
+      // Map to database field names and include only Updateable fields
+      const updateData = {
+        Id: recordId
+      };
+
+      if (listData.name_c !== undefined || listData.name !== undefined) {
+        const newName = listData.name_c || listData.name;
+        updateData.Name = newName;
+        updateData.name_c = newName;
+      }
+      if (listData.color_c !== undefined || listData.color !== undefined) {
+        updateData.color_c = listData.color_c || listData.color;
+      }
+      if (listData.order_c !== undefined || listData.order !== undefined) {
+        updateData.order_c = parseInt(listData.order_c || listData.order);
+      }
+
+      const params = {
+        records: [updateData]
+      };
+
+      const response = await apperClient.updateRecord('list_c', params);
+
+      if (!response.success) {
+        console.error("Failed to update list:", response.message);
+        toast.error(response.message);
+        return null;
+      }
+
+      if (response.results) {
+        const successful = response.results.filter(r => r.success);
+        const failed = response.results.filter(r => !r.success);
+
+        if (failed.length > 0) {
+          console.error(`Failed to update ${failed.length} lists:`, failed);
+          failed.forEach(record => {
+            if (record.message) toast.error(record.message);
+          });
+        }
+
+        return successful[0]?.data || null;
+      }
+
+      return null;
+    } catch (error) {
+      console.error("Error updating list:", error?.response?.data?.message || error);
+      return null;
     }
-    
-    const updatedList = {
-      ...lists[listIndex],
-      ...listData
-    }
-    
-    lists[listIndex] = updatedList
-    return { ...updatedList }
   },
-  
+
   async delete(id) {
-    await delay(200)
-    const listIndex = lists.findIndex(list => list.id === id)
-    if (listIndex === -1) {
-      throw new Error("List not found")
+    try {
+      const apperClient = getApperClient();
+      
+      // Handle both numeric ID and string-based lookups
+      let recordId;
+      if (typeof id === 'string' && isNaN(parseInt(id))) {
+        const list = await this.getById(id);
+        if (!list) {
+          throw new Error("List not found");
+        }
+        recordId = list.Id;
+      } else {
+        recordId = parseInt(id);
+      }
+
+      const params = {
+        RecordIds: [recordId]
+      };
+
+      const response = await apperClient.deleteRecord('list_c', params);
+
+      if (!response.success) {
+        console.error("Failed to delete list:", response.message);
+        toast.error(response.message);
+        return false;
+      }
+
+      if (response.results) {
+        const successful = response.results.filter(r => r.success);
+        const failed = response.results.filter(r => !r.success);
+
+        if (failed.length > 0) {
+          console.error(`Failed to delete ${failed.length} lists:`, failed);
+          failed.forEach(record => {
+            if (record.message) toast.error(record.message);
+          });
+        }
+
+        return successful.length > 0;
+      }
+
+      return true;
+    } catch (error) {
+      console.error("Error deleting list:", error?.response?.data?.message || error);
+return false;
     }
-    
-    lists.splice(listIndex, 1)
-    return { success: true }
   }
-}
+};

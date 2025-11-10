@@ -1,48 +1,64 @@
-import React, { useState, useEffect } from "react"
-import { motion } from "framer-motion"
-import ApperIcon from "@/components/ApperIcon"
-import Button from "@/components/atoms/Button"
-import Input from "@/components/atoms/Input"
-import Textarea from "@/components/atoms/Textarea"
-import Select from "@/components/atoms/Select"
-import PrioritySelector from "@/components/molecules/PrioritySelector"
-import DatePicker from "@/components/molecules/DatePicker"
-import { cn } from "@/utils/cn"
+import React, { useEffect, useState } from "react";
+import { motion } from "framer-motion";
+import ApperIcon from "@/components/ApperIcon";
+import Textarea from "@/components/atoms/Textarea";
+import Button from "@/components/atoms/Button";
+import Input from "@/components/atoms/Input";
+import Select from "@/components/atoms/Select";
+import PrioritySelector from "@/components/molecules/PrioritySelector";
+import DatePicker from "@/components/molecules/DatePicker";
+import { cn } from "@/utils/cn";
 
 const TaskForm = ({ 
   task = null, 
   lists = [], 
   onSubmit, 
-  onCancel, 
-  isOpen = false 
+  onCancel,
+  isOpen = false
 }) => {
+  const [errors, setErrors] = useState({})
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [listsData, setListsData] = useState([])
+  
   const [formData, setFormData] = useState({
     title: "",
     description: "",
     priority: "medium",
     dueDate: "",
-    listId: "personal"
+    listId: ""
   })
+// Load lists for dropdown
+  useEffect(() => {
+    const loadLists = async () => {
+      try {
+        const { listService } = await import("@/services/api/listService")
+        const allLists = await listService.getAll()
+        setListsData(allLists)
+      } catch (error) {
+        console.error("Error loading lists:", error)
+      }
+    }
+    
+    loadLists()
+  }, [])
   
-  const [errors, setErrors] = useState({})
-  const [isSubmitting, setIsSubmitting] = useState(false)
-  
+  // Update form when task prop changes
   useEffect(() => {
     if (task) {
       setFormData({
-        title: task.title || "",
-        description: task.description || "",
-        priority: task.priority || "medium",
-        dueDate: task.dueDate || "",
-        listId: task.listId || "personal"
+        title: task.title_c || task.title || "",
+        description: task.description_c || task.description || "",
+        priority: task.priority_c || task.priority || "medium",
+        dueDate: task.due_date_c || task.dueDate || "",
+        listId: task.list_id_c?.Id || task.list_id_c || task.listId || ""
       })
-    } else {
+} else {
       setFormData({
         title: "",
         description: "",
         priority: "medium",
         dueDate: "",
-        listId: "personal"
+        listId: ""
       })
     }
     setErrors({})
@@ -80,11 +96,13 @@ const TaskForm = ({
     
     setIsSubmitting(true)
     
-    try {
+try {
       const taskData = {
-        ...formData,
-        title: formData.title.trim(),
-        description: formData.description.trim()
+        title_c: formData.title.trim(),
+        description_c: formData.description.trim(),
+        priority_c: formData.priority,
+        due_date_c: formData.dueDate || null,
+        list_id_c: formData.listId ? parseInt(formData.listId) : null
       }
       
       await onSubmit(taskData)
@@ -95,7 +113,7 @@ const TaskForm = ({
           description: "",
           priority: "medium",
           dueDate: "",
-          listId: "personal"
+          listId: ""
         })
       }
     } catch (error) {
@@ -150,15 +168,18 @@ const TaskForm = ({
             rows={3}
           />
           
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <Select
               label="List"
               value={formData.listId}
               onChange={(e) => handleInputChange("listId", e.target.value)}
             >
-              <option value="work">Work</option>
-              <option value="personal">Personal</option>
-              <option value="shopping">Shopping</option>
+              <option value="">Select a list</option>
+              {listsData.map((list) => (
+                <option key={list.Id} value={list.Id}>
+                  {list.name_c}
+                </option>
+              ))}
             </Select>
             
             <DatePicker

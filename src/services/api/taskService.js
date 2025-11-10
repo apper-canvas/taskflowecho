@@ -1,114 +1,255 @@
-import tasksData from "@/services/mockData/tasks.json"
-
-let tasks = [...tasksData]
-
-const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms))
+import { getApperClient } from "@/services/apperClient";
+import { toast } from "react-toastify";
 
 export const taskService = {
   async getAll() {
-    await delay(300)
-    return [...tasks]
+    try {
+      const apperClient = getApperClient();
+      
+      const params = {
+        fields: [
+          {"field": {"Name": "Id"}},
+          {"field": {"Name": "title_c"}},
+          {"field": {"Name": "description_c"}},
+          {"field": {"Name": "priority_c"}},
+          {"field": {"Name": "due_date_c"}},
+          {"field": {"Name": "list_id_c"}, "referenceField": {"field": {"Name": "name_c"}}},
+          {"field": {"Name": "completed_c"}},
+          {"field": {"Name": "completed_at_c"}},
+          {"field": {"Name": "CreatedOn"}}
+        ],
+        orderBy: [{"fieldName": "CreatedOn", "sorttype": "DESC"}]
+      };
+
+      const response = await apperClient.fetchRecords('task_c', params);
+
+      if (!response.success) {
+        console.error("Failed to fetch tasks:", response.message);
+        toast.error(response.message);
+        return [];
+      }
+
+      return response.data || [];
+    } catch (error) {
+      console.error("Error fetching tasks:", error?.response?.data?.message || error);
+      return [];
+    }
   },
-  
+
   async getById(id) {
-    await delay(200)
-    const task = tasks.find(task => task.Id === parseInt(id))
-    if (!task) {
-      throw new Error("Task not found")
+    try {
+      const apperClient = getApperClient();
+      
+      const params = {
+        fields: [
+          {"field": {"Name": "Id"}},
+          {"field": {"Name": "title_c"}},
+          {"field": {"Name": "description_c"}},
+          {"field": {"Name": "priority_c"}},
+          {"field": {"Name": "due_date_c"}},
+          {"field": {"Name": "list_id_c"}, "referenceField": {"field": {"Name": "name_c"}}},
+          {"field": {"Name": "completed_c"}},
+          {"field": {"Name": "completed_at_c"}},
+          {"field": {"Name": "CreatedOn"}}
+        ]
+      };
+
+      const response = await apperClient.getRecordById('task_c', parseInt(id), params);
+
+      if (!response.success) {
+        console.error(`Failed to fetch task ${id}:`, response.message);
+        toast.error(response.message);
+        return null;
+      }
+
+      return response.data;
+    } catch (error) {
+      console.error(`Error fetching task ${id}:`, error?.response?.data?.message || error);
+      return null;
     }
-    return { ...task }
   },
-  
+
   async create(taskData) {
-    await delay(400)
-    const maxId = Math.max(...tasks.map(task => task.Id), 0)
-    const newTask = {
-      Id: maxId + 1,
-      ...taskData,
-      completed: false,
-      createdAt: new Date().toISOString(),
-      completedAt: null
+    try {
+      const apperClient = getApperClient();
+      
+      // Map to database field names and include only Updateable fields
+      const params = {
+        records: [{
+          title_c: taskData.title_c || taskData.title || "",
+          description_c: taskData.description_c || taskData.description || "",
+          priority_c: taskData.priority_c || taskData.priority || "medium",
+          due_date_c: taskData.due_date_c || taskData.dueDate || null,
+          list_id_c: taskData.list_id_c || parseInt(taskData.listId) || null,
+          completed_c: false,
+          completed_at_c: null
+        }]
+      };
+
+      const response = await apperClient.createRecord('task_c', params);
+
+      if (!response.success) {
+        console.error("Failed to create task:", response.message);
+        toast.error(response.message);
+        return null;
+      }
+
+      if (response.results) {
+        const successful = response.results.filter(r => r.success);
+        const failed = response.results.filter(r => !r.success);
+
+        if (failed.length > 0) {
+          console.error(`Failed to create ${failed.length} tasks:`, failed);
+          failed.forEach(record => {
+            if (record.message) toast.error(record.message);
+          });
+        }
+
+        return successful[0]?.data || null;
+      }
+
+      return null;
+    } catch (error) {
+      console.error("Error creating task:", error?.response?.data?.message || error);
+      return null;
     }
-    tasks.push(newTask)
-    return { ...newTask }
   },
-  
+
   async update(id, taskData) {
-    await delay(300)
-    const taskIndex = tasks.findIndex(task => task.Id === parseInt(id))
-    if (taskIndex === -1) {
-      throw new Error("Task not found")
+    try {
+      const apperClient = getApperClient();
+      
+      // Map to database field names and include only Updateable fields
+      const updateData = {
+        Id: parseInt(id)
+      };
+
+      if (taskData.title_c !== undefined || taskData.title !== undefined) {
+        updateData.title_c = taskData.title_c || taskData.title;
+      }
+      if (taskData.description_c !== undefined || taskData.description !== undefined) {
+        updateData.description_c = taskData.description_c || taskData.description;
+      }
+      if (taskData.priority_c !== undefined || taskData.priority !== undefined) {
+        updateData.priority_c = taskData.priority_c || taskData.priority;
+      }
+      if (taskData.due_date_c !== undefined || taskData.dueDate !== undefined) {
+        updateData.due_date_c = taskData.due_date_c || taskData.dueDate;
+      }
+      if (taskData.list_id_c !== undefined || taskData.listId !== undefined) {
+        updateData.list_id_c = parseInt(taskData.list_id_c || taskData.listId);
+      }
+      if (taskData.completed_c !== undefined || taskData.completed !== undefined) {
+        updateData.completed_c = taskData.completed_c !== undefined ? taskData.completed_c : taskData.completed;
+      }
+      if (taskData.completed_at_c !== undefined || taskData.completedAt !== undefined) {
+        updateData.completed_at_c = taskData.completed_at_c || taskData.completedAt;
+      }
+
+      const params = {
+        records: [updateData]
+      };
+
+      const response = await apperClient.updateRecord('task_c', params);
+
+      if (!response.success) {
+        console.error("Failed to update task:", response.message);
+        toast.error(response.message);
+        return null;
+      }
+
+      if (response.results) {
+        const successful = response.results.filter(r => r.success);
+        const failed = response.results.filter(r => !r.success);
+
+        if (failed.length > 0) {
+          console.error(`Failed to update ${failed.length} tasks:`, failed);
+          failed.forEach(record => {
+            if (record.message) toast.error(record.message);
+          });
+        }
+
+        return successful[0]?.data || null;
+      }
+
+      return null;
+    } catch (error) {
+      console.error("Error updating task:", error?.response?.data?.message || error);
+      return null;
     }
-    
-    const updatedTask = {
-      ...tasks[taskIndex],
-      ...taskData
-    }
-    
-    tasks[taskIndex] = updatedTask
-    return { ...updatedTask }
   },
-  
+
   async delete(id) {
-    await delay(250)
-    const taskIndex = tasks.findIndex(task => task.Id === parseInt(id))
-    if (taskIndex === -1) {
-      throw new Error("Task not found")
+    try {
+      const apperClient = getApperClient();
+      
+      const params = {
+        RecordIds: [parseInt(id)]
+      };
+
+      const response = await apperClient.deleteRecord('task_c', params);
+
+      if (!response.success) {
+        console.error("Failed to delete task:", response.message);
+        toast.error(response.message);
+        return false;
+      }
+
+      if (response.results) {
+        const successful = response.results.filter(r => r.success);
+        const failed = response.results.filter(r => !r.success);
+
+        if (failed.length > 0) {
+          console.error(`Failed to delete ${failed.length} tasks:`, failed);
+          failed.forEach(record => {
+            if (record.message) toast.error(record.message);
+          });
+        }
+
+        return successful.length > 0;
+      }
+
+      return true;
+    } catch (error) {
+      console.error("Error deleting task:", error?.response?.data?.message || error);
+      return false;
     }
-    
-    tasks.splice(taskIndex, 1)
-    return { success: true }
   },
-  
+
   async toggleComplete(id) {
-    await delay(200)
-    const task = tasks.find(task => task.Id === parseInt(id))
-    if (!task) {
-      throw new Error("Task not found")
+    try {
+      // Get current task state
+      const currentTask = await this.getById(id);
+      if (!currentTask) {
+        throw new Error("Task not found");
+      }
+
+      const isCompleted = !currentTask.completed_c;
+      const completedAt = isCompleted ? new Date().toISOString() : null;
+
+      const updatedTask = await this.update(id, {
+        completed_c: isCompleted,
+        completed_at_c: completedAt
+      });
+
+      return updatedTask;
+    } catch (error) {
+      console.error("Error toggling task completion:", error);
+      throw error;
     }
-    
-    task.completed = !task.completed
-    task.completedAt = task.completed ? new Date().toISOString() : null
-    
-    return { ...task }
   },
-  
-  async getByList(listId) {
-    await delay(250)
-    return tasks.filter(task => task.listId === listId).map(task => ({ ...task }))
-  },
-  
-  async getToday() {
-    await delay(250)
-    const today = new Date().toISOString().split('T')[0]
-    return tasks.filter(task => task.dueDate === today).map(task => ({ ...task }))
-  },
-  
-  async getUpcoming() {
-    await delay(250)
-    const today = new Date()
-    return tasks.filter(task => {
-      if (!task.dueDate) return false
-      const taskDate = new Date(task.dueDate)
-      return taskDate > today
-    }).map(task => ({ ...task }))
-  },
-  
-  async getCompleted() {
-    await delay(250)
-    return tasks.filter(task => task.completed).map(task => ({ ...task }))
-  },
-  
+
   async restore(id) {
-    await delay(200)
-    const task = tasks.find(task => task.Id === parseInt(id))
-    if (!task) {
-      throw new Error("Task not found")
+    try {
+      const updatedTask = await this.update(id, {
+        completed_c: false,
+        completed_at_c: null
+      });
+
+      return updatedTask;
+    } catch (error) {
+      console.error("Error restoring task:", error);
+      throw error;
     }
-    
-    task.completed = false
-    task.completedAt = null
-    
-    return { ...task }
   }
-}
+};

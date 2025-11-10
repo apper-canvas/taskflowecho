@@ -1,23 +1,71 @@
-import React, { useState } from "react"
-import { Outlet, useLocation, Link } from "react-router-dom"
-import ApperIcon from "@/components/ApperIcon"
-import { cn } from "@/utils/cn"
+import React, { useEffect, useState } from "react";
+import { Link, Outlet, useLocation } from "react-router-dom";
+import { useAuth } from "@/layouts/Root";
+import { taskService } from "@/services/api/taskService";
+import { listService } from "@/services/api/listService";
+import ApperIcon from "@/components/ApperIcon";
+import Button from "@/components/atoms/Button";
+import Archive from "@/components/pages/Archive";
+import { cn } from "@/utils/cn";
 
 const Layout = () => {
-  const [sidebarOpen, setSidebarOpen] = useState(false)
   const location = useLocation()
+  const { logout } = useAuth()
   
-  // Mock data for sidebar counts
-  const navigationItems = [
-    { name: "All Tasks", path: "/", icon: "List", count: 12 },
-    { name: "Today", path: "/today", icon: "Calendar", count: 5 },
-    { name: "Upcoming", path: "/upcoming", icon: "Clock", count: 7 }
-  ]
+  const [taskCounts, setTaskCounts] = useState({})
+  const [lists, setLists] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [sidebarOpen, setSidebarOpen] = useState(false)
   
-  const lists = [
-    { id: "work", name: "Work", path: "/list/work", color: "bg-blue-500", count: 8 },
-    { id: "personal", name: "Personal", path: "/list/personal", color: "bg-green-500", count: 3 },
-    { id: "shopping", name: "Shopping", path: "/list/shopping", color: "bg-purple-500", count: 1 }
+  // Load data for sidebar counts
+  useEffect(() => {
+    const loadData = async () => {
+      try {
+        const [allTasks, allLists] = await Promise.all([
+          taskService.getAll(),
+          listService.getAll()
+        ])
+        
+        // Calculate task counts
+        const today = new Date().toISOString().split('T')[0]
+        const tomorrow = new Date(Date.now() + 86400000)
+        
+        const counts = {
+          all: allTasks.length,
+          today: allTasks.filter(task => task.due_date_c === today).length,
+          upcoming: allTasks.filter(task => {
+            if (!task.due_date_c) return false
+            const taskDate = new Date(task.due_date_c)
+            return taskDate > tomorrow
+          }).length
+        }
+        
+        // Map lists with task counts
+        const listsWithCounts = allLists.map(list => ({
+          ...list,
+          count: allTasks.filter(task => 
+            task.list_id_c?.Id === list.Id ||
+            task.list_id_c === list.Id
+          ).length
+        }))
+        
+        setTaskCounts(counts)
+        setLists(listsWithCounts)
+      } catch (error) {
+        console.error("Error loading layout data:", error)
+      } finally {
+        setLoading(false)
+      }
+    }
+    
+    loadData()
+  }, [])
+  
+  // Mock data for navigation items with real counts
+const navigationItems = [
+    { name: "All Tasks", path: "/", icon: "List", count: taskCounts.all || 0 },
+    { name: "Today", path: "/today", icon: "Calendar", count: taskCounts.today || 0 },
+    { name: "Upcoming", path: "/upcoming", icon: "Clock", count: taskCounts.upcoming || 0 }
   ]
   
   const isActivePath = (path) => {
@@ -27,40 +75,45 @@ const Layout = () => {
     return location.pathname.startsWith(path)
   }
   
-  const SidebarContent = () => (
+const SidebarContent = () => (
     <>
-      {/* Logo */}
+      {/* Logo and Header */}
       <div className="px-6 py-6 border-b border-gray-200">
-        <div className="flex items-center gap-3">
-          <div className="w-8 h-8 bg-gradient-to-r from-primary-500 to-indigo-600 rounded-lg flex items-center justify-center">
-            <ApperIcon name="CheckCircle2" size={20} className="text-white" />
+        <div className="flex items-center gap-3 mb-4">
+          <div className="w-10 h-10 bg-gradient-to-r from-primary-500 to-indigo-600 rounded-lg flex items-center justify-center">
+            <ApperIcon name="CheckSquare" size={24} className="text-white" />
           </div>
-          <h1 className="text-xl font-bold text-gray-900">TaskFlow</h1>
+          <div className="flex-1">
+            <h1 className="text-xl font-bold text-gray-900">TaskFlow</h1>
+            <p className="text-sm text-gray-500">Professional Task Management</p>
+          </div>
+          <Button
+            onClick={logout}
+            variant="ghost"
+            size="sm"
+            icon="LogOut"
+            className="text-gray-500 hover:text-gray-700"
+          />
         </div>
       </div>
       
-      {/* Navigation */}
-      <div className="px-3 py-4 space-y-1">
-        {navigationItems.map((item) => (
-          <Link
-            key={item.name}
-            to={item.path}
-            className={cn(
-              "sidebar-item flex items-center justify-between px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-150",
-              isActivePath(item.path)
-                ? "active bg-primary-50 text-primary-700 border-l-3 border-primary-500"
-                : "text-gray-700 hover:text-gray-900"
-            )}
-          >
-            <div className="flex items-center gap-3">
-              <ApperIcon 
-                name={item.icon} 
-                size={18} 
-                className={isActivePath(item.path) ? "text-primary-600" : "text-gray-400"}
-              />
-              {item.name}
-            </div>
-            {item.count > 0 && (
+      <div className="px-6 py-6">
+        {/* Main Navigation */}
+        <nav className="space-y-2 mb-8">
+          {navigationItems.map((item) => (
+            <Link
+              key={item.path}
+              to={item.path}
+              className={cn(
+                "flex items-center justify-between p-3 rounded-lg transition-all duration-150 sidebar-item",
+                isActivePath(item.path) && "active"
+              )}
+            >
+              <div className="flex items-center gap-3">
+                <ApperIcon name={item.icon} size={20} />
+                <span className="font-medium">{item.name}</span>
+              </div>
+              
               <span className={cn(
                 "px-2 py-0.5 text-xs rounded-full font-semibold",
                 isActivePath(item.path)
@@ -69,51 +122,49 @@ const Layout = () => {
               )}>
                 {item.count}
               </span>
-            )}
-          </Link>
-        ))}
-      </div>
-      
-      {/* Lists section */}
-      <div className="px-3 py-4 border-t border-gray-200">
-        <div className="flex items-center justify-between px-3 mb-3">
-          <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
-            Lists
-          </h3>
-          <button className="text-gray-400 hover:text-gray-600 transition-colors">
-            <ApperIcon name="Plus" size={16} />
-          </button>
-        </div>
-        
-        <div className="space-y-1">
-          {lists.map((list) => (
-            <Link
-              key={list.id}
-              to={list.path}
-              className={cn(
-                "sidebar-item flex items-center justify-between px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-150",
-                isActivePath(list.path)
-                  ? "active bg-primary-50 text-primary-700 border-l-3 border-primary-500"
-                  : "text-gray-700 hover:text-gray-900"
-              )}
-            >
-              <div className="flex items-center gap-3">
-                <div className={cn("w-3 h-3 rounded-full", list.color)} />
-                {list.name}
-              </div>
-              {list.count > 0 && (
-                <span className={cn(
-                  "px-2 py-0.5 text-xs rounded-full font-semibold",
-                  isActivePath(list.path)
-                    ? "bg-primary-200 text-primary-800"
-                    : "bg-gray-200 text-gray-600"
-                )}>
-                  {list.count}
-                </span>
-              )}
             </Link>
           ))}
+        </nav>
+        
+        {/* Lists */}
+        <div className="mb-6">
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="text-sm font-semibold text-gray-500 px-3">Lists</h2>
+            <button className="text-gray-400 hover:text-gray-600 transition-colors">
+              <ApperIcon name="Plus" size={16} />
+            </button>
+          </div>
+          
+          <div className="space-y-1">
+            {lists.map((list) => (
+              <Link
+                key={list.Id}
+                to={`/list/${list.Id}`}
+                className={cn(
+                  "flex items-center justify-between p-3 rounded-lg transition-all duration-150 sidebar-item",
+                  isActivePath(`/list/${list.Id}`) && "active"
+                )}
+              >
+                <div className="flex items-center gap-3">
+                  <div className={cn("w-3 h-3 rounded-full")} style={{ backgroundColor: list.color_c || '#6366f1' }} />
+                  <span className="font-medium">{list.name_c}</span>
+                </div>
+                
+                {list.count > 0 && (
+                  <span className={cn(
+                    "px-2 py-0.5 text-xs rounded-full font-semibold",
+                    isActivePath(`/list/${list.Id}`)
+                      ? "bg-primary-200 text-primary-800"
+                      : "bg-gray-200 text-gray-600"
+                  )}>
+                    {list.count}
+                  </span>
+                )}
+              </Link>
+            ))}
+          </div>
         </div>
+      </div>
       </div>
       
       {/* Archive link */}
